@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>conert webp</title>
+</head>
+<body>
+<div id="wrap">
+    <input type="file" multiple>
+    <div class="sample">
+        
+    </div>
+</div>
+<style>
+    /* .sample{
+        width:1000px;
+        height:800px;
+        border:1px solid red;
+        overflow:hidden
+    }
+    .sample img{
+        max-width:100%;
+        height:auto
+    } */
+</style>
+<script>
+    let refs = {};
+    refs.imagePreviews = document.querySelector('.sample');
+    refs.fileSelector = document.querySelector('input[type=file]');
+
+    function addImageBox(container) {
+        let imageBox = document.createElement("div");
+        // let progressBox = document.createElement("progress");
+        // imageBox.appendChild(progressBox);
+        container.appendChild(imageBox);
+        
+        return imageBox;
+    }
+
+    function processFile(file) {
+        console.log(file);
+
+        let imageBox = addImageBox(refs.imagePreviews);
+
+        // Load the data into an image
+        new Promise((resolve, reject) => {
+            if (!file) {
+                reject(new Error("No File"))
+            }
+
+            let rawImage = new Image();
+
+            rawImage.addEventListener("load", () => resolve(rawImage));
+
+            rawImage.src = URL.createObjectURL(file);
+        })
+        .then(function (rawImage) {
+            // Convert image to webp ObjectURL via a canvas blob
+            return new Promise((resolve, reject) => {
+                if(!rawImage.src){
+                    reject(new Error("No Image"))
+                }
+
+                let canvas = document.createElement('canvas');
+                let ctx = canvas.getContext("2d");
+
+                let maxWidth = 800,
+                    maxHeight = 800;
+
+                let width = rawImage.width,
+                    height = rawImage.height;
+
+                if( width > height ){
+                    if( width > maxWidth ) {
+                        height *= maxWidth / width;
+                        width = maxWidth
+                    }
+                } else {
+                    if( height > maxHeight ) {
+                        width *= maxHeight / height;
+                        height = maxHeight
+                    }
+                }
+        
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(rawImage, 0, 0, width, height);
+
+                canvas.toBlob(blob => {
+                    resolve(URL.createObjectURL(blob));
+                }, "image/webp");
+            });
+        })
+        .then(function (imageURL) {
+            // Load image for display on the page
+            return new Promise((resolve, reject) => {
+                if(!imageURL){
+                    reject(new Error("Fail Covert"))
+                }
+
+                let scaledImg = new Image();
+
+                scaledImg.addEventListener("load", () => resolve({imageURL, scaledImg}));
+
+                scaledImg.setAttribute("src", imageURL);
+            });
+        })
+        .then(function (data) {
+            // imageBox.innerHTML = "";
+            imageBox.appendChild(data.scaledImg);
+        })
+        .catch(function(err){
+            console.log(err)
+        });
+    }
+
+    function processFiles(files) {
+        for (let file of files) {
+            processFile(file);
+        }
+    }
+
+    function fileSelectorChanged() {
+        processFiles(refs.fileSelector.files);
+        refs.fileSelector.value = "";
+    }
+
+    refs.fileSelector.addEventListener("change", fileSelectorChanged);
+
+</script>
+</body>
+</html>
